@@ -1,0 +1,57 @@
+# Lancement local :  docker compose up -d --build
+# 3 conteneurs sur un réseau privé Docker ; seul nginx (frontend) est exposé.
+#
+#   Navigateur ──► frontend (nginx :80) ──/api──► backend (Spring Boot :8080) ──► db (PostgreSQL :5432)
+
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"   # évite que les logs remplissent le disque
+    max-file: "3"
+
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - db-data:/var/lib/postgresql/data   # les données survivent au redémarrage
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+    logging: *default-logging
+    # Pas de "ports:" => la base n'est PAS accessible depuis l'extérieur (bonne pratique)
+
+  backend:
+    build: ./backend
+    image: flotte-backend:local
+    environment:
+      DB_URL: jdbc:postgresql://db:5432/${POSTGRES_DB}
+      DB_USER: ${POSTGRES_USER}
+      DB_PASSWORD: ${POSTGRES_PASSWORD}
+      SEED_DEMO_DATA: ${SEED_DEMO_DATA:-true}
+    depends_on:
+      db:
+        condition: service_healthy
+    mem_limit: 512m
+    restart: unless-stopped
+    logging: *default-logging
+
+  frontend:
+    build: ./frontend
+    image: flotte-frontend:local
+    ports:
+      - "${HTTP_PORT:-8080}:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
+    logging: *default-logging
+
+volumes:
+  db-data:

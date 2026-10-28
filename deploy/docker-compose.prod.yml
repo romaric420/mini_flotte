@@ -1,0 +1,56 @@
+# Version "production" utilisée sur le serveur AWS (EC2).
+# Différence avec la version locale : pas de "build", on TÉLÉCHARGE les images
+# déjà construites depuis Amazon ECR (registre d'images Docker d'AWS).
+# => On l'utilisera à l'étape de déploiement, pas avant.
+
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    mem_limit: 256m
+    restart: unless-stopped
+    logging: *default-logging
+
+  backend:
+    image: ${BACKEND_IMAGE}
+    environment:
+      DB_URL: jdbc:postgresql://db:5432/${POSTGRES_DB}
+      DB_USER: ${POSTGRES_USER}
+      DB_PASSWORD: ${POSTGRES_PASSWORD}
+      SEED_DEMO_DATA: ${SEED_DEMO_DATA:-true}
+    depends_on:
+      db:
+        condition: service_healthy
+    mem_limit: 512m
+    restart: unless-stopped
+    logging: *default-logging
+
+  frontend:
+    image: ${FRONTEND_IMAGE}
+    ports:
+      - "80:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+    mem_limit: 64m
+    restart: unless-stopped
+    logging: *default-logging
+
+volumes:
+  db-data:

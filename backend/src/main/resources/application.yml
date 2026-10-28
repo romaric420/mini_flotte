@@ -1,0 +1,38 @@
+# Toute valeur sensible ou propre à l'environnement vient d'une variable
+# d'environnement (12-factor app). Les valeurs après ":" sont des défauts pour le dev.
+spring:
+  application:
+    name: flotte-api
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/flotte}
+    username: ${DB_USER:flotte}
+    password: ${DB_PASSWORD:flotte}
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate      # Hibernate VÉRIFIE le schéma, c'est Flyway qui le crée
+  flyway:
+    enabled: true
+  mvc:
+    problemdetails:
+      enabled: true           # erreurs renvoyées en JSON standard (RFC 9457)
+
+server:
+  port: 8080
+  shutdown: graceful
+  forward-headers-strategy: framework   # on est derrière nginx (reverse proxy)
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      probes:
+        enabled: true
+      show-details: never
+
+app:
+  # Crée les 5 utilisateurs + véhicules de démo si la base est vide
+  seed-demo-data: ${SEED_DEMO_DATA:true}
