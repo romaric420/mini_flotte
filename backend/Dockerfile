@@ -12,7 +12,7 @@ RUN mvn -B -q package -DskipTests
 FROM eclipse-temurin:21-jre-alpine
 WORKDIR /app
 # Bonne pratique : ne jamais faire tourner l'appli en root dans le conteneur
-RUN addgroup -S app && adduser -S app -G app
+RUN apk upgrade --no-cache && addgroup -S app && adduser -S app -G app
 COPY --from=build /app/target/flotte-api.jar app.jar
 USER app
 EXPOSE 8080
