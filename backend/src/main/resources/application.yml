@@ -36,3 +36,5 @@ management:
 app:
   # Crée les 5 utilisateurs + véhicules de démo si la base est vide
   seed-demo-data: ${SEED_DEMO_DATA:true}
+  # Mot de passe commun des comptes de démo (vide = mots de passe du README)
+  demo-password: ${DEMO_PASSWORD:}

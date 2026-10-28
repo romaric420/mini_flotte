@@ -6,6 +6,7 @@ import com.flotte.repository.MaintenanceRepository;
 import com.flotte.repository.VehicleRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -30,13 +31,17 @@ public class DemoDataInitializer implements CommandLineRunner {
     private final VehicleRepository vehicles;
     private final MaintenanceRepository maintenances;
     private final PasswordEncoder encoder;
+    /** Si renseigné (ex. sur AWS), remplace les mots de passe de démo des 5 comptes. */
+    private final String demoPassword;
 
     public DemoDataInitializer(AppUserRepository users, VehicleRepository vehicles,
-                               MaintenanceRepository maintenances, PasswordEncoder encoder) {
+                               MaintenanceRepository maintenances, PasswordEncoder encoder,
+                               @Value("${app.demo-password:}") String demoPassword) {
         this.users = users;
         this.vehicles = vehicles;
         this.maintenances = maintenances;
         this.encoder = encoder;
+        this.demoPassword = demoPassword;
     }
 
     @Override
@@ -89,6 +94,6 @@ public class DemoDataInitializer implements CommandLineRunner {
     }
 
     private AppUser user(String username, String fullName, String email, String rawPassword, Role role) {
-        return new AppUser(username, fullName, email, encoder.encode(rawPassword), role);
+        return new AppUser(username, fullName, email, encoder.encode(demoPassword.isBlank() ? rawPassword : demoPassword), role);
     }
 }
